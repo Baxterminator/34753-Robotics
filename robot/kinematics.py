@@ -2,7 +2,7 @@ from typing import Tuple, List
 
 import numpy as np
 
-from .types import RobotParameters, CartesianGoal, DEFAULT_PARAMS, JointState
+from .types import RobotParameters, CartesianGoal, DEFAULT_PARAMS, JointState, T45
 
 
 def divide_by_cos_or_sin(value_cos: float, value_sin: float, theta: float) -> float:
@@ -30,18 +30,18 @@ def force_zero(m: np.ndarray, min_number=1E-8) -> np.ndarray:
 def normalize_angle(a: float) -> float:
     return np.mod(a + np.pi, 2 * np.pi) - np.pi
 
-
-def robot_fk(js: JointState, robot: RobotParameters = DEFAULT_PARAMS) -> np.ndarray:
-    h01 = dh_matrix(js.q1, robot.d1, np.deg2rad(90), 0)
-    h12 = dh_matrix(js.q2 + np.deg2rad(90), 0, 0, robot.a2)
-    h23 = dh_matrix(js.q3, 0, 0, robot.a3)
-    h34 = dh_matrix(js.q4, 0, 0, robot.a4)
-    # print(f"h01 =\n{force_zero(h01)}")
-    # print(f"h12 =\n{force_zero(h12)}")
-    # print(f"h23 =\n{force_zero(h23)}")
-    # print(f"h34 =\n{force_zero(h34)}")
-    return force_zero(h01 @ h12 @ h23 @ h34)
-    # return h01 @ h12 @ h23 @ h34
+# to compute homogeneous matrix with respect to base from for all the joints
+def robot_fk(js: JointState, fr: int = 0, to: int = 4, robot: RobotParameters = DEFAULT_PARAMS) -> np.ndarray:
+    matrices = [
+        dh_matrix(js.q1, robot.d1, np.deg2rad(90), 0),
+        dh_matrix(js.q2 + np.deg2rad(90), 0, 0, robot.a2),
+        dh_matrix(js.q3, 0, 0, robot.a3),
+        dh_matrix(js.q4, 0, 0, robot.a4),
+    ]
+    M = np.eye(4)
+    for idx in range(fr, to):
+        M = M @ matrices[idx]
+    return force_zero(M)
 
 
 def robot_ik(goal: CartesianGoal, robot: RobotParameters = DEFAULT_PARAMS) -> List[JointState]:
@@ -66,7 +66,7 @@ def robot_ik(goal: CartesianGoal, robot: RobotParameters = DEFAULT_PARAMS) -> Li
         S = D1 * D1 + D2 * D2
         cth3 = (S - robot.a2 * robot.a2 - robot.a3 * robot.a3) / (2 * robot.a2 * robot.a3)
         if np.fabs(cth3) <= 1:
-            print(f"cos(th3)={cth3}")
+            #print(f"cos(th3)={cth3}")
             th3 = np.arccos(cth3)
             return [
                 JointState(_js.q1, 0, th3, 0),
@@ -126,3 +126,45 @@ def robot_ik(goal: CartesianGoal, robot: RobotParameters = DEFAULT_PARAMS) -> Li
     solutions = [compute_theta_4(solutions[i], th24_th3[i]) for i in range(len(solutions))]
 
     return solutions
+
+
+def jacobians(T: list) -> List[np.ndarray]:
+        
+    #define the matrix T05   
+    T05 = T[-1] @ T45
+    
+    # define the origins and the z vector
+    
+    o = []
+    z = []
+    o.append(np.array([0,0,0]))
+    z.append(np.array([0,0,1]))
+    for t in T:
+        o.append(t[0:3,3])
+        z.append(t[0:3,2])
+        
+    o.append(T05[0:3,3])
+    
+    # compute the jacobians
+    # for end effector: J4
+    # and for the camera: J5
+    
+    for idx in range(0,4):        
+        j4 = np.concatenate((np.cross(z[idx],(o[-2] - o[idx])).reshape(-1,1),z[idx].reshape(-1,1)), axis=0)
+        
+        # add columns to J4
+        try:
+            J4 = np.hstack((J4, j4))  
+        except NameError:
+            J4 = j4  # if J does not exist create it
+        
+        j5 = np.concatenate((np.cross(z[idx],(o[-1] - o[idx])).reshape(-1,1),z[idx].reshape(-1,1)), axis=0)
+        
+        # add columns to J4
+        try:
+            J5 = np.hstack((J5, j5))  
+        except NameError:
+            J5 = j5  # if J does not exist create it
+                
+    return [J4,J5]
+        

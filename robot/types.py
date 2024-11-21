@@ -12,12 +12,12 @@ class RobotParameters:
 
 @dataclass
 class CartesianGoal:
-    rx: float
-    ry: float
-    rz: float
-    x: float
-    y: float
-    z: float
+    rx: float = None
+    ry: float = None
+    rz: float = None
+    x: float = None
+    y: float = None
+    z: float = None
 
 
 def close_to(v1, v2) -> bool:
@@ -56,3 +56,10 @@ class JointState:
 
 
 DEFAULT_PARAMS = RobotParameters(0.05, 0.093, 0.093, 0.05)
+
+T45 = np.array([
+    [1, 0, 0, -0.015],
+    [0, 1, 0, 0.035],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+])
