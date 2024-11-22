@@ -20,11 +20,6 @@ phis = [0, np.pi/2, np.pi, np.pi*3/2, 2*np.pi]
 points = [CartesianGoal(x=xc, y=yc + R * np.cos(phi), z=zc + R * np.sin(phi), rz=0) for phi in phis]
 
 
-# Plotting the 3D circle and the robot arm positions
-fig = plt.figure(figsize=(10, 8))
-ax = fig.add_subplot(111, projection='3d')
-ax.plot([p.x for p in points], [p.y for p in points], [p.z for p in points], 'b--', label="Desired Circle")
-
 # Compute and plot the arm configuration for each point
 for point in points:
     joint_states = robot_ik(point)

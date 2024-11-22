@@ -134,7 +134,6 @@ def jacobians(T: list) -> List[np.ndarray]:
     T05 = T[-1] @ T45
     
     # define the origins and the z vector
-    
     o = []
     z = []
     o.append(np.array([0,0,0]))
@@ -167,4 +166,66 @@ def jacobians(T: list) -> List[np.ndarray]:
             J5 = j5  # if J does not exist create it
                 
     return [J4,J5]
+
+
+def joints_velocities(v_lin: np.ndarray, r: np.ndarray, J: np.ndarray) -> np.ndarray:
+    
+    v_norm = np.linalg.norm(v_lin)
+    if v_norm != 0:
+        r_norm = np.linalg.norm(r)
         
+        w_norm = v_norm/r_norm
+        w_dir = np.cross(r/r_norm,v_lin/v_norm)
+        w = w_dir*w_norm
+        
+        v =  np.concatenate((v_lin.reshape(-1,1),w.reshape(-1,1)))
+        #print(v)
+        # pseudoinverse of J @ v
+        J_plus = np.linalg.inv(np.transpose(J) @ J) @ np.transpose(J) 
+        return J_plus @ v
+        
+    else:
+        # v = [0,0,0,0,0,0]'
+        v = np.concatenate((v_lin.reshape(-1,1),v_lin.reshape(-1,1)))
+        #print(v)
+        return np.array([0,0,0,0]).reshape(-1,1)
+        
+  
+def quintic(q0: float, q1: float, qd0: float, qd1: float,t0: float, t1:float, qdd0: float = 0.0, qdd1: float = 0.0, n_points: int = 10):
+    
+    # q0 = initial position
+    # qd0 = initial velocity
+    # qdd0 = initial acceleration
+    # q1 = final position
+    # qd1 = final velocity
+    # qdd1 = final acceleration
+    # t0 = initial time
+    # t1 = final time
+    
+    t = np.linspace(t0, t1, n_points * (t1 - t0))
+    
+    # coefficient matrix for quintic system
+    M = np.array([
+        [1, t0, t0**2, t0**3, t0**4, t0**5],
+        [0, 1, 2*t0, 3*t0**2, 4*t0**3, 5*t0**4],
+        [0, 0, 2, 6*t0, 12*t0**2, 20*t0**3],
+        [1, t1, t1**2, t1**3, t1**4, t1**5],
+        [0, 1, 2*t1, 3*t1**2, 4*t1**3, 5*t1**4],
+        [0, 0, 2, 6*t1, 12*t1**2, 20*t1**3]
+    ])
+
+    # known values
+    b = np.array([q0, qd0, qdd0, q1, qd1, qdd1])
+
+    # solve linear system
+    a = np.linalg.solve(M, b)
+
+    # qd = position trajectory
+    # vd = velocity trajectory
+    # ad = acceleration trajectory
+    c = np.ones_like(t)
+    q = (a[0]*c + a[1]*t + a[2]*t**2 + a[3]*t**3 + a[4]*t**4 + a[5]*t**5)
+    qd = (a[1]*c + 2*a[2]*t + 3*a[3]*t**2 + 4*a[4]*t**3 + 5*a[5]*t**4)
+    qdd = (2*a[2]*c + 6*a[3]*t + 12*a[4]*t**2 + 20*a[5]*t**3)
+
+    return q, qd, qdd
