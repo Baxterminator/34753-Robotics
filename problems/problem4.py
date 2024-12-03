@@ -34,7 +34,7 @@ for point in points:
     
     J = jacobians(T)
     print(f"joint state values: {js} \n\n")
-    print(f"Jacobian J4: \n\n {J[0]} \n\n Jacobian J5:\n\n {J[0]}\n")
+    print(f"Jacobian J4: \n\n {J[0]} \n\n Jacobian J5:\n\n {J[1]}\n")
         
 
 

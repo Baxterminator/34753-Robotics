@@ -12,6 +12,14 @@ def divide_by_cos_or_sin(value_cos: float, value_sin: float, theta: float) -> fl
     return -value_cos / c
 
 
+def translation_matrix(goal: CartesianGoal) -> np.ndarray:
+    H = np.eye(4)
+    H[0,3] = goal.x
+    H[1,3] = goal.y
+    H[2,3] = goal.z
+    return H
+
+
 def dh_matrix(th: float, d: float, alpha: float, a: float) -> np.ndarray:
     return np.array([
         [np.cos(th), -np.sin(th) * np.cos(alpha), np.sin(th) * np.sin(alpha), a * np.cos(th)],
@@ -179,7 +187,6 @@ def joints_velocities(v_lin: np.ndarray, r: np.ndarray, J: np.ndarray) -> np.nda
         w = w_dir*w_norm
         
         v =  np.concatenate((v_lin.reshape(-1,1),w.reshape(-1,1)))
-        #print(v)
         # pseudoinverse of J @ v
         J_plus = np.linalg.inv(np.transpose(J) @ J) @ np.transpose(J) 
         return J_plus @ v
@@ -191,6 +198,25 @@ def joints_velocities(v_lin: np.ndarray, r: np.ndarray, J: np.ndarray) -> np.nda
         return np.array([0,0,0,0]).reshape(-1,1)
         
   
+def joints_velocities2(v_lin: np.ndarray,J: np.ndarray,js: JointState) -> np.ndarray: 
+    v_norm = np.linalg.norm(v_lin)
+    if v_norm != 0:
+        
+        
+        v =  np.concatenate((v_lin.reshape(-1,1),np.array([[0]])))
+        # define linear velocity jacpobian:
+        Jv = J[0:3,:]
+        
+        J_plus =  np.concatenate((Jv,np.array([[0,-np.sin(js.q2+js.q3+js.q4),-np.sin(js.q2+js.q3+js.q4),-np.sin(js.q2+js.q3+js.q4)]])))
+        return np.linalg.inv(J_plus) @ v
+        
+    else:
+        # v = [0,0,0,0,0,0]'
+        v = np.concatenate((v_lin.reshape(-1,1),v_lin.reshape(-1,1)))
+        #print(v)
+        return np.array([0,0,0,0]).reshape(-1,1)
+
+
 def quintic(q0: float, q1: float, qd0: float, qd1: float,t0: float, t1:float, qdd0: float = 0.0, qdd1: float = 0.0, n_points: int = 10):
     
     # q0 = initial position
