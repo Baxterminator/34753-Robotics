@@ -77,6 +77,11 @@ def q6_get_path(robot: RobotModel, N=10):
 
     def computeJointStates(js_list: List[JointState], _M: np.ndarray) -> None:
         for t in Time:
+            print(f"t = {t}\n{''.ljust(24, '-')}")
+            for i in range(4):
+                print(
+                    f"Q{i + 1}: {Quintic.compute_pos(_M[i, :], t):.3f} rad {Quintic.compute_vel(_M[i, :], t):.3f} rad/s {Quintic.compute_accel(_M[i, :], t):.3f} rad/s²")
+            print()
             js_list.append(JointState(
                 Quintic.compute_pos(_M[0, :], t),
                 Quintic.compute_pos(_M[1, :], t),

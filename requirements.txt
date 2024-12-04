@@ -1,0 +1,7 @@
+numpy~=1.26.4
+colorama~=0.4.4
+pyserial~=3.5
+opencv-python~=4.9.0.80
+matplotlib~=3.5.1
+dynamixel-sdk
+scipy~=1.14.0

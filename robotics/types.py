@@ -51,9 +51,13 @@ class JointState:
             self.q4 - other.q4,
         )
 
+    def close_to(self, other: "JointState", tol: float) -> bool:
+        return close_to(self.q1, other.q1, tol) and close_to(self.q2, other.q2, tol) and close_to(self.q3, other.q3,
+                                                                                                  tol) and close_to(
+            self.q4, other.q4, tol)
+
     def __eq__(self, other) -> bool:
-        return close_to(self.q1, other.q1) and close_to(self.q2, other.q2) and close_to(self.q3, other.q3) and close_to(
-            self.q4, other.q4)
+        return self.close_to(other)
 
     def __repr__(self):
         out = "JointState("

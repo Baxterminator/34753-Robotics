@@ -32,3 +32,8 @@ for DXL_ID in DXL_IDS:
     packetHandler.write2ByteTxRx(portHandler, DXL_ID, ADDR_MX_GOAL_POSITION, 512)
 # time.sleep(10)
 # portHandler.closePort()
+
+
+# Angles in int([0-300]/300*1023)
+# Rest conf [150 150 150 240] in int
+# Picture conf [150 110 130 130]
