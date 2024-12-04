@@ -27,6 +27,11 @@ def detect_and_smooth_curve(img: np.ndarray, camera_matrix: np.ndarray, dist_coe
     epsilon = 0.0005 * cv2.arcLength(curve_contour, True)  # Adjust epsilon to control approximation precision
     approx_curve = cv2.approxPolyDP(curve_contour, epsilon, True)
 
+    output_img = img.copy()
+    for i in range(len(approx_curve) - 1):
+        cv2.circle(output_img, (int(approx_curve[i][0][0]), int(approx_curve[i][0][1])), 5, (255, 0, 0), 10)
+    cv2.imshow("Approx Curve", output_img)
+
     # Filter redundant points (remove points that are too close to each other)
     filtered_points = [approx_curve[0]]
     for point in approx_curve[1:]:
@@ -36,6 +41,13 @@ def detect_and_smooth_curve(img: np.ndarray, camera_matrix: np.ndarray, dist_coe
     # Extract x, y coordinates
     filtered_points = np.array([point[0] for point in filtered_points], dtype=np.float32)
 
+    # Draw the filtered points on the image
+    output_img = img.copy()
+    for i in range(len(filtered_points) - 1):
+        cv2.circle(output_img, (int(filtered_points[i, 0]), int(filtered_points[i, 1])), 5, (255, 0, 0), 10)
+    cv2.imshow("Filtered Points", output_img)
+    # cv2.waitKey(0)
+    
     # Smooth the curve using a spline
     x, y = filtered_points[:, 0], filtered_points[:, 1]
     tck, _ = splprep([x, y], s=1)  # Smoothness factor (s)
@@ -44,10 +56,16 @@ def detect_and_smooth_curve(img: np.ndarray, camera_matrix: np.ndarray, dist_coe
     smoothed_points = np.vstack((x_smooth, y_smooth)).T
 
     # Undistort image points
-    undistorted_points = cv2.undistortPoints(smoothed_points, camera_matrix, dist_coefficients)
-    ones = np.ones((len(undistorted_points), 1))
+    undistorted_points = cv2.undistortPoints(smoothed_points, camera_matrix, dist_coefficients).squeeze()
+    print(f"Undistorded points shape {undistorted_points.shape}")
+    N_points = len(undistorted_points)
+    ones = np.ones((N_points, 1))
+    print("Undistorded points")
+    print(undistorted_points)
     camera_points = np.hstack(
-        (undistorted_points.squeeze(), z_coordinate * ones, ones))  # 4D homogeneous coordinates
+        (z_coordinate * ones, np.reshape(-z_coordinate * undistorted_points[:, 0], (-1, 1)),
+         np.reshape(z_coordinate * undistorted_points[:, 1], (-1, 1)),
+         ones))  # 4D homogeneous coordinates
 
     # Draw the smoothed curve on the image for visualization
     output_img = img.copy()

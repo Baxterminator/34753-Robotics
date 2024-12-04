@@ -3,6 +3,7 @@ import glob
 from typing import Dict, List
 
 import cv2
+import numpy as np
 import serial
 
 from serial.tools.list_ports_common import ListPortInfo
@@ -32,17 +33,16 @@ def get_all_ports() -> Dict[str, str]:
 
 
 def get_all_cam_index() -> List[int]:
-    index = 0
+    index = 10
     arr = []
-    while True:
+    while index >= 0:
         try:
             cap = cv2.VideoCapture(index)
-            if not cap.read()[0]:
-                break
-            else:
-                arr.append(index)
+            if cap.isOpened():
+                arr.append(np.max([index, 0]))
             cap.release()
         except:
             pass
-        index += 1
+        index -= 1
+    arr.reverse()
     return arr

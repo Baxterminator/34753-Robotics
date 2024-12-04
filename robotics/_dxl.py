@@ -115,7 +115,7 @@ class DXLWrapper:
 
     @staticmethod
     def deg_to_int_angle(val: float):
-        return int(val / 300 * 1023)
+        return int(val % 300 / 300 * 1023)
 
     @staticmethod
     def int_to_deg_angle(val: int):
@@ -133,8 +133,9 @@ class DXLWrapper:
         return result_code == ResultCode.SUCCESS
 
     def configure_robot(self):
+        print("Configuring robot")
         for i in range(1, 5):
-            print(f"Configuring motor {i}")
+            print(f"\t - Configuring motor {i}")
             # CW movement
             self.send_command(i, DXLFlags.MX_CW_COMPLIANCE_MARGIN, self._params.cw_behavior.compliance_margin)
             self.send_command(i, DXLFlags.MX_CW_COMPLIANCE_SLOPE, self._params.cw_behavior.compliance_slope)
@@ -151,5 +152,4 @@ class DXLWrapper:
             self.get_value(i, DXLFlags.MX_PRESENT_POSITION)[0]
             for i in range(1, 5)
         ]
-        print(out)
         return out

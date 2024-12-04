@@ -21,13 +21,13 @@ MOTOR_PARAMS.cw_behavior.compliance_margin = 3
 MOTOR_PARAMS.cw_behavior.compliance_slope = 32
 MOTOR_PARAMS.ccw_behavior.compliance_margin = 3
 MOTOR_PARAMS.ccw_behavior.compliance_slope = 32
-MOTOR_PARAMS.moving_speed = 10
+MOTOR_PARAMS.moving_speed = 50
 
 MAX_VAL = 300  # In degrees
 IDLE_JOINT = MAX_VAL // 2
 
-ZEROS_POS = JointState(IDLE_JOINT, 240, IDLE_JOINT, IDLE_JOINT)  # In degrees
-CAPTURE_POS = JointState(150, 110, 130, 130)  # In degrees
+ZEROS_POS = JointState(IDLE_JOINT, IDLE_JOINT, IDLE_JOINT, 250)  # In degrees
+CAPTURE_POS = JointState(np.deg2rad(0), -np.deg2rad(45), -np.deg2rad(40), -np.deg2rad(95))  # In degrees
 
 CAMERA_MATRIX = np.array([[1068.0, 0, 506.8],
                           [0, 1083.0, 371.8],

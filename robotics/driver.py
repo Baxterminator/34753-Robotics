@@ -1,19 +1,26 @@
 import sys
 import time
+from enum import Enum
 
 import cv2
 import numpy as np
 
 from .kinematics import RobotModel
-from .math import close_to
+from .math import normalize_angle
 from .motors import MotorsParameters
 from ._dxl import DXLWrapper, DXLFlags
 from .types import JointState, RobotParameters
 
 
+class ValueType(Enum):
+    RADIANS = 0
+    DEGREES = 1
+    INT = 2
+
+
 class RobotDriver(DXLWrapper):
     def __init__(self, interface: str, baud_rate: int, motors_param: MotorsParameters, robot_model: RobotParameters,
-                 protocol=1.0, cam_id: int = 1):
+                 protocol=1.0, cam_id: int = 1, zero_pose=JointState(0, 0, 0, 0)):
         super().__init__(interface, baud_rate, motors_param, protocol)
 
         # Camera
@@ -22,6 +29,7 @@ class RobotDriver(DXLWrapper):
 
         # Model
         self.model = RobotModel(robot_model)
+        self.zero_pose = zero_pose
 
     def __enter__(self):
         super().__enter__()
@@ -42,13 +50,39 @@ class RobotDriver(DXLWrapper):
     # =========================================================================
 
     def capture_img(self) -> np.ndarray | None:
-        if self._cap is None:
+        if self._cap is None or not self._cap.isOpened():
+            print("Error while connecting to the camera !", file=sys.stderr)
             return None
         ret, img = self._cap.read()
         if not ret:
             print("Error while capturing image !", file=sys.stderr)
             return None
         return img
+
+    # =========================================================================
+    # Math related function
+    # =========================================================================
+    def real_to_int_angles(self, val: JointState) -> JointState:
+        def convert(v: float, zero: float) -> float:
+            return RobotDriver.deg_to_int_angle(np.rad2deg(normalize_angle(v)) + zero)
+
+        return JointState(
+            convert(val.q1, self.zero_pose.q1),
+            convert(val.q2, self.zero_pose.q2),
+            convert(val.q3, self.zero_pose.q3),
+            convert(val.q4, self.zero_pose.q4)
+        )
+
+    def int_to_real_angles(self, val: JointState) -> JointState:
+        def convert(v: float, zero: float) -> float:
+            return normalize_angle(np.deg2rad((RobotDriver.int_to_deg_angle(int(v)) - zero)))
+
+        return JointState(
+            convert(val.q1, self.zero_pose.q1),
+            convert(val.q2, self.zero_pose.q2),
+            convert(val.q3, self.zero_pose.q3),
+            convert(val.q4, self.zero_pose.q4)
+        )
 
     # =========================================================================
     # High-level functions
@@ -64,65 +98,66 @@ class RobotDriver(DXLWrapper):
             for i in range(1, 5):
                 self.send_command(i, DXLFlags.MX_TORQUE_ENABLE, 0)
 
-    def send_joints_goal(self, js: JointState) -> None:
-        self.send_command(1, DXLFlags.MX_GOAL_POSITION, RobotDriver.deg_to_int_angle(js.q1))
-        self.send_command(2, DXLFlags.MX_GOAL_POSITION, RobotDriver.deg_to_int_angle(js.q2))
-        self.send_command(3, DXLFlags.MX_GOAL_POSITION, RobotDriver.deg_to_int_angle(js.q3))
-        self.send_command(4, DXLFlags.MX_GOAL_POSITION, RobotDriver.deg_to_int_angle(js.q4))
+    def send_joints_goal(self, js: JointState, t=ValueType.RADIANS) -> JointState:
+        print(f"Sending goal {js}")
+        match t:
+            case ValueType.RADIANS:
+                return self.send_joints_goal(self.real_to_int_angles(js), ValueType.INT)
+            case ValueType.DEGREES:
+                return self.send_joints_goal(JointState(self.deg_to_int_angle(js.q1), self.deg_to_int_angle(js.q2),
+                                                        self.deg_to_int_angle(js.q3), self.deg_to_int_angle(js.q4)),
+                                             ValueType.INT)
+            case ValueType.INT:
+                self.send_command(1, DXLFlags.MX_GOAL_POSITION, int(js.q1))
+                self.send_command(2, DXLFlags.MX_GOAL_POSITION, int(js.q2))
+                self.send_command(3, DXLFlags.MX_GOAL_POSITION, int(js.q3))
+                self.send_command(4, DXLFlags.MX_GOAL_POSITION, int(js.q4))
+                return js
 
-    def get_joint_state(self) -> JointState:
+    def get_joint_state(self, t=ValueType.RADIANS) -> JointState:
         """
         Return the joint state in degrees in the range [0-300]
         """
         positions = self.get_motors_pos()
-        return JointState(
-            RobotDriver.int_to_deg_angle(positions[0]),
-            RobotDriver.int_to_deg_angle(positions[1]),
-            RobotDriver.int_to_deg_angle(positions[2]),
-            RobotDriver.int_to_deg_angle(positions[3])
-        )
+        match t:
+            case ValueType.RADIANS:
+                return self.int_to_real_angles(JointState(
+                    positions[0],
+                    positions[1],
+                    positions[2],
+                    positions[3]
+                ))
+            case ValueType.DEGREES:
+                return JointState(
+                    RobotDriver.int_to_deg_angle(positions[0]),
+                    RobotDriver.int_to_deg_angle(positions[1]),
+                    RobotDriver.int_to_deg_angle(positions[2]),
+                    RobotDriver.int_to_deg_angle(positions[3])
+                )
+            case ValueType.INT:
+                return JointState(
+                    positions[0],
+                    positions[1],
+                    positions[2],
+                    positions[3]
+                )
 
-    def get_real_joint_state(self, zero_pose: JointState) -> JointState:
-        """
-        Return the joint state in radians and with a value of 0 rad at the rest position
-        :param zero_pose: the pose of the robot at the idle position (in degrees values)
-        """
-        # Convert the joint state to radians & zero-mean angles
-        js = self.get_joint_state()
-        return JointState(
-            np.deg2rad(js.q1 - zero_pose.q1),
-            np.deg2rad(js.q2 - zero_pose.q2),
-            np.deg2rad(js.q3 - zero_pose.q3),
-            np.deg2rad(js.q4 - zero_pose.q4)
-        )
-
-    def move_to(self, goal: JointState) -> None:
+    def move_to(self, goal: JointState, t=ValueType.RADIANS) -> None:
         """
         Send the joint goal for the several motors and wait for them to come at completion
 
-        :param goal: the joint state to go to (in degrees in [0-300])
+        :param t: the type of the values in the joint state
+        :param goal: the joint state to go to
         """
         # If not on real robot, skip it
         if not self._real_robot:
             return
 
         # Else wait for robot to come at position
-        self.send_joints_goal(goal)
-        current = self.get_joint_state()
-        while not current.close_to(goal, 2.0):
-            print(current)
+        goal_int = self.send_joints_goal(goal, t)
+        current = self.get_joint_state(ValueType.INT)
+        print(f"-------\nGoal   : {goal_int}\nCurrent: {current}\nDelta  : {current - goal_int}")
+        while not current.close_to(goal_int, 10):
             time.sleep(0.1)
-            current = self.get_joint_state()
-
-    def move_to_real_angles(self, goal: JointState) -> None:
-        """
-        Send the joint goal for the several motors and wait for them to come at completion
-
-        :param goal: the joint state to go to (in radians)
-        """
-        self.move_to(JointState(
-            np.rad2deg(goal.q1),
-            np.rad2deg(goal.q2),
-            np.rad2deg(goal.q3),
-            np.rad2deg(goal.q4)
-        ))
+            current = self.get_joint_state(ValueType.INT)
+            print(f"-------\nGoal   : {goal_int}\nCurrent: {current}\nDelta  : {current - goal_int}")

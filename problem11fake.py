@@ -7,7 +7,7 @@ import numpy as np
 
 from robotics.driver import RobotDriver, ValueType
 from robotics.serial import get_all_ports, get_all_cam_index
-from robotics.types import CartesianGoal
+from robotics.types import CartesianGoal, JointState
 from robotics.vision import detect_and_smooth_curve
 
 from parameters import ZEROS_POS, CAPTURE_POS, MOTOR_PARAMS, CAMERA_MATRIX, DISTORSION_MATRIX, ROBOT_MODEL
@@ -37,6 +37,14 @@ def choose_camera() -> int:
     raise RuntimeError(f"Invalid choice {dev_id} for camera index")
 
 
+POSITIONS = np.array([
+    [-20, -65, -50, -65],
+    [-10, -65, -50, -65],
+    [0, -65, -50, -65],
+    [10, -65, -50, -65],
+    [20, -65, -50, -65],
+])
+
 # Main loop
 if __name__ == "__main__":
     robot_port = choose_robot_port()
@@ -60,33 +68,21 @@ if __name__ == "__main__":
         if img is None:
             exit(-1)
         cv2.imshow("Captured image", img)
-        cv2.waitKey(0)
 
-        # Find the 2D points in camera frame
         capture_js = driver.get_joint_state(ValueType.RADIANS)
         camera_frame = driver.model.forward_kinematic(capture_js)
         z_coo = camera_frame[2, 3]
         camera_points = detect_and_smooth_curve(img, CAMERA_MATRIX, DISTORSION_MATRIX, z_coo)
-        print("Camera points")
-        print(camera_points)
-        world_points: np.ndarray[float] = camera_points @ camera_frame.T
-        print("World points")
-        print(world_points)
         cv2.waitKey(0)
 
-        # Follow the points
-        n_points, dim = world_points.shape
-        print(f"{n_points} to follow (of dim {dim})!")
-        for i in range(n_points):
-            print(f"Following point {i}", end=" - ")
-            goal = world_points[i, :]
-            possible_joint_states = driver.model.inverse_kinematic(CartesianGoal(goal[0], goal[1], 0.05, 0, 0, 1))
-            N_solutions = len(possible_joint_states)
-            if N_solutions == 0:
-                print(f"0 solutions to get to this point")
-                continue
-            print(f"{N_solutions} possible solutions found")
-            driver.move_to(possible_joint_states[0], ValueType.RADIANS)
+        n_row, _ = POSITIONS.shape
+        for i in range(n_row):
+            driver.move_to(JointState(
+                np.deg2rad(POSITIONS[i, 0]),
+                np.deg2rad(POSITIONS[i, 1]),
+                np.deg2rad(POSITIONS[i, 2]),
+                np.deg2rad(POSITIONS[i, 3])
+            ))
 
         # Move back to "Idle" position
         print("Going back to idle position ...")
