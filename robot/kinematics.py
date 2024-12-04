@@ -217,7 +217,7 @@ def joints_velocities2(v_lin: np.ndarray,J: np.ndarray,js: JointState) -> np.nda
         return np.array([0,0,0,0]).reshape(-1,1)
 
 
-def quintic(q0: float, q1: float, qd0: float, qd1: float,t0: float, t1:float, qdd0: float = 0.0, qdd1: float = 0.0, n_points: int = 10):
+def quintic(q0: float, q1: float, qd0: float, qd1: float,t0: float, t1:float, qdd0: float = 0.0, qdd1: float = 0.0, n_points: int = 5):
     
     # q0 = initial position
     # qd0 = initial velocity
@@ -228,7 +228,7 @@ def quintic(q0: float, q1: float, qd0: float, qd1: float,t0: float, t1:float, qd
     # t0 = initial time
     # t1 = final time
     
-    t = np.linspace(t0, t1, n_points * (t1 - t0))
+    t = np.linspace(t0, t1, n_points * (round(t1) - round(t0)))
     
     # coefficient matrix for quintic system
     M = np.array([
@@ -254,4 +254,4 @@ def quintic(q0: float, q1: float, qd0: float, qd1: float,t0: float, t1:float, qd
     qd = (a[1]*c + 2*a[2]*t + 3*a[3]*t**2 + 4*a[4]*t**3 + 5*a[5]*t**4)
     qdd = (2*a[2]*c + 6*a[3]*t + 12*a[4]*t**2 + 20*a[5]*t**3)
 
-    return q, qd, qdd
+    return q, qd, qdd, t

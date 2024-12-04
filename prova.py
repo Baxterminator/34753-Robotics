@@ -48,7 +48,7 @@ def detect_and_smooth_curve(image_path, camera_matrix, dist_coeffs):
     smoothed_points = np.vstack((x_smooth, y_smooth)).T
 
     # Undistort image points
-    undistorted_points = cv2.undistortPoints(smoothed_points, camera_matrix, dist_coeffs)
+    undistorted_points = cv2.undistortPoints(filtered_points, camera_matrix, dist_coeffs)
     camera_points = np.hstack((undistorted_points.squeeze(), np.zeros((len(undistorted_points), 1))))  # Add Z = 0
 
     # # Transform points to world coordinates

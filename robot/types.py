@@ -63,3 +63,9 @@ T45 = np.array([
     [0, 0, 1, 0],
     [0, 0, 0, 1]
 ])
+
+CAMERA_MATRIX = np.array([[1068.0, 0, 506.8],
+                          [0, 1083.0, 371.8],
+                          [0, 0, 1]])  # Intrinsic parameters
+
+DIST_COEFF = np.array([0.1158, 0.0412, 0, 0, 0])  # Distortion coefficients

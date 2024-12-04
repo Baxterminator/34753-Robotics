@@ -2,6 +2,7 @@ from typing import Tuple, List
 from colorama import Fore, Style
 import numpy as np
 
+import pandas as pd
 import sys 
 import os
 
@@ -72,18 +73,36 @@ for i in range(len(points)):
     r = force_zero(np.array([points[i].x-xc, points[i].y-yc, points[i].z-zc]))
     qd = joints_velocities2(v_lin[i],J[0],js)
     qd1 = joints_velocities(v_lin[i],r,J[0])
-    print(f"joint_velocities2:\n {qd}")
-    print(f"joint_angle:\n {js}")
-    print(f"velocities:\n {force_zero(J[0]@qd1)} ")
+    # print(f"joint_velocities2:\n {qd}")
+    # print(f"joint_angle:\n {js}")
+    # print(f"velocities:\n {force_zero(J[0]@qd1)} ")
     
     
     if(i!=0):
-        seq_q1, qd_4, qdd_4 = quintic(js0.q1,js.q1,qd0[0][0],qd[0][0],time,time+2)
-        seq_q2, qd_4, qdd_4 = quintic(js0.q2,js.q2,qd0[1][0],qd[1][0],time,time+2)
-        seq_q3, qd_4, qdd_4 = quintic(js0.q3,js.q3,qd0[2][0],qd[2][0],time,time+2)
-        seq_q4, qd_4, qdd_4 = quintic(js0.q4,js.q4,qd0[3][0],qd[3][0],time,time+2)
-        #print(seq_q1)
+        incr = (phis[i]-phis[i-1])/np.pi*4
+        print(f"incr: {incr}")
+        seq_q1, qd_1, qdd_1, t = quintic(js0.q1,js.q1,qd0[0][0],qd[0][0],time,time+incr)
+        seq_q2, qd_2, qdd_2, t = quintic(js0.q2,js.q2,qd0[1][0],qd[1][0],time,time+incr)
+        seq_q3, qd_3, qdd_3, t = quintic(js0.q3,js.q3,qd0[2][0],qd[2][0],time,time+incr)
+        seq_q4, qd_4, qdd_4, t = quintic(js0.q4,js.q4,qd0[3][0],qd[3][0],time,time+incr)
+        # print(f"q1: {seq_q1}")
+        # print(f"q2: {seq_q2}")
+        # print(f"q3: {seq_q3}")
+        # print(f"q4: {seq_q4}")
         
+        # # Save on csv file
+        # data = pd.DataFrame({
+        #     't': t,
+        #     'q1': seq_q1, 'qd1': qd_1, 'qdd1': qdd_1,
+        #     'q2': seq_q2, 'qd2': qd_2, 'qdd2': qdd_2,
+        #     'q3': seq_q3, 'qd3': qd_3, 'qdd3': qdd_3,
+        #     'q4': seq_q4, 'qd4': qd_4, 'qdd4': qdd_4
+        # })
+
+        # # Salvataggio su file CSV
+        # csv_file = f"state{i}.csv"
+        # data.to_csv(csv_file, index=False)
+
         for s in range(len(seq_q1)):
             q.q1 = seq_q1[s]
             q.q2 = seq_q2[s]

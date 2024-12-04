@@ -37,7 +37,7 @@ packetHandler = dxl.PacketHandler(PROTOCOL_VERSION)
 portHandler.openPort()
 portHandler.setBaudRate(BAUDRATE)
 
-def rotate_rest(angles: List = [0,0,0,0]):
+def rotate2real(angles: list = [0,0,0,0]):
     return [angles[0] + 150,
             angles[1] + 150,
             angles[2] + 150,
@@ -142,7 +142,7 @@ for i in range(len(points)):
         
         for s in range(len(seq_q1)):
             # convert radiants in degrees
-            angles = rotate_rest([np.degrees(seq_q1[s]),
+            angles = rotate2real([np.degrees(seq_q1[s]),
                       np.degrees(seq_q2[s]),
                       np.degrees(seq_q3[s]),
                       np.degrees(seq_q4[s])])
