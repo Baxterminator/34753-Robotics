@@ -23,7 +23,7 @@ ADDR_MX_PRESENT_POSITION = 36
 ADDR_MX_PUNCH = 48
 PROTOCOL_VERSION = 1.0
 DXL_IDS = [1, 2, 3, 4]
-DEVICENAME = "COM10"
+DEVICENAME = "COM11"
 BAUDRATE = 1000000
 TORQUE_ENABLE = 1
 TORQUE_DISABLE = 0
@@ -33,7 +33,7 @@ portHandler.openPort()
 portHandler.setBaudRate(BAUDRATE)
 
 def rotate2real(angles: list = [0,0,0,0]):
-    return [angles[0] + 150, angles[1] + 240, angles[2] + 150, angles[3] + 150]
+    return [angles[0] + 150, angles[1] + 150, angles[2] + 150, angles[3] + 240]
 
 def picture_pose():
     # set the robot to picture pose
@@ -50,7 +50,7 @@ def picture_pose():
         packetHandler.write2ByteTxRx(portHandler, DXL_ID, ADDR_MX_MOVING_SPEED, 90)
         packetHandler.write2ByteTxRx(portHandler, DXL_ID, ADDR_MX_GOAL_POSITION, dxl_angles[DXL_ID-1])
         
-    #time.sleep(8)
+    time.sleep(8)
         
     # convert pose angles in radiants
     pose_angles = [angle*np.pi/180 for angle in pose_angles]  
@@ -67,7 +67,7 @@ def picture_pose():
 # Opens a video capture device with a resolution of 800x600
 # at 30 FPS.
 def open_camera(cam_id=1):
-    cap = cv2.VideoCapture(cam_id)
+    cap = cv2.VideoCapture(cam_id,cv2.CAP_DSHOW)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Fixed the property name
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)   # Fixed the property name
     cap.set(cv2.CAP_PROP_FPS, 30)            # Fixed the property name
@@ -130,7 +130,7 @@ def detect_and_smooth_curve(image_path, z_cam,camera_matrix, dist_coeffs):
     # Undistort image points
     undistorted_points = cv2.undistortPoints(filtered_points, camera_matrix, dist_coeffs)
     mm_points = undistorted_points * (z_cam + 0.045)
-    camera_points = np.hstack((mm_points.squeeze(), np.ones((len(mm_points), 1))*z_cam))  # Add Z = z_cam
+    camera_points = np.hstack((mm_points.squeeze(), np.ones((len(mm_points), 1))*(z_cam-0.010)))  # Add Z = z_cam
 
     # # Transform points to world coordinates
     # rotation_matrix, _ = cv2.Rodrigues(rotation_vector)  # Convert rotation vector to matrix
@@ -162,7 +162,6 @@ if __name__ == "__main__":
     # DEFINE THE HEIGHT OF CAMERA
     ###
     js_cam = picture_pose()
-    print(js_cam)
     T04 = robot_fk(js_cam)
     T05= T04 @ T45
     
@@ -242,7 +241,7 @@ if __name__ == "__main__":
         
         #print(f"point{p}")
         
-        points.append(CartesianGoal(x=p[0],y=p[1],z=p[2],rx=0,ry=0,rz=1))
+        points.append(CartesianGoal(x=p[0,0],y=p[1,0],z=p[2,0],rx=0,ry=0,rz=-1))
         
     ##################################################################
         
@@ -250,10 +249,17 @@ if __name__ == "__main__":
     # compute inverse kinematics and move the robot
     ###
     for i in range(len(points)):
-        print(points[i])
         joint_states = robot_ik(points[i])    
-        print(joint_states)
-        js = joint_states[0]
+        #print(joint_states)
+        for i in range(len(joint_states)):
+            angles = rotate2real([np.degrees(joint_states[i].q1), np.degrees(joint_states[i].q2), np.degrees(joint_states[i].q3), np.degrees(joint_states[i].q4)])
+
+            # Verifica che tutti gli angoli siano compresi tra 0 e 300
+            are_valid = all(0 <= angle <= 300 for angle in angles)
+            if are_valid and angles[1]>29:
+                js = joint_states[i]
+                break
+            
         # # compute the jacobian for the first solution:
         # T = []
         # for idx in range(1, 5):
@@ -283,7 +289,9 @@ if __name__ == "__main__":
             packetHandler.write2ByteTxRx(portHandler, DXL_ID, ADDR_MX_MOVING_SPEED, 90)
             packetHandler.write2ByteTxRx(portHandler, DXL_ID, ADDR_MX_GOAL_POSITION, dxl_goal_position)
             
-        time.sleep(0.25)
+        time.sleep(0.5)
+        
+    picture_pose()
     
 
 

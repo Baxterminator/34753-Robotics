@@ -35,7 +35,7 @@ packetHandler.write2ByteTxRx(portHandler, 1, ADDR_MX_MOVING_SPEED, 30)
 packetHandler.write2ByteTxRx(portHandler, 1, ADDR_MX_GOAL_POSITION, angle1)
 
 
-angle2 = int(110/300*1023)
+angle2 = int(150/300*1023)
 packetHandler.write1ByteTxRx(
     portHandler, 2, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE
 )
@@ -46,7 +46,7 @@ packetHandler.write1ByteTxRx(
 packetHandler.write2ByteTxRx(portHandler, 2, ADDR_MX_MOVING_SPEED, 30)
 packetHandler.write2ByteTxRx(portHandler, 2, ADDR_MX_GOAL_POSITION, angle2)
 
-angle3 = int(130/300*1023)
+angle3 = int(150/300*1023)
 packetHandler.write1ByteTxRx(
         portHandler, 3, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE
     )
@@ -57,7 +57,7 @@ packetHandler.write1ByteTxRx(
 packetHandler.write2ByteTxRx(portHandler, 3, ADDR_MX_MOVING_SPEED, 30)
 packetHandler.write2ByteTxRx(portHandler, 3, ADDR_MX_GOAL_POSITION,angle3)
 
-angle4 = int(130/300*1023)
+angle4 = int(220/300*1023)
 packetHandler.write1ByteTxRx(
     portHandler, 4, ADDR_MX_TORQUE_ENABLE, TORQUE_ENABLE
 )
